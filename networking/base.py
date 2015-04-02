@@ -1,6 +1,5 @@
 import socket
 
-
 def get_local_addr(family=socket.AF_INET, remote="192.0.2.123"):
     """
     Gets preferable IP address for current machine, most of the
