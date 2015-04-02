@@ -1,5 +1,5 @@
 import SocketServer
-
+import time
 
 class UDPServer(SocketServer.UDPServer):
     def __init__(self, server_address):
@@ -7,7 +7,8 @@ class UDPServer(SocketServer.UDPServer):
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
         self.client_addr = None
 
-    def speak(self, data="fuck off", to=None):
+    def send_text(self, data="fuck off", to=None):
+        time.sleep(2)
         try:
             if to:
                 self.socket.sendto(data, to)
@@ -23,7 +24,6 @@ class UDPServer(SocketServer.UDPServer):
         :param client_address:
         :return:
         """
-        data, socket = request # request[0], request[1]
-        # self.socket = request[1]
+        data, socket = request  # request[0], request[1]
         print "socket: {}".format(socket)
         print "{} wrote: {}".format(client_address[0], data)

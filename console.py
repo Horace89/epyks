@@ -37,7 +37,14 @@ def greetings():
     prnt('-' * 80)
 
 
+def ipv4_check(addr):
+    return re.match(IPV4_MATCH, addr)
+
+def port_check(port):
+    return 0 < int(port) < 65535
+
 def commander(server_instance=None):
+    call = False
     while True:
         data = raw_input()
         if data == "exit":
@@ -45,7 +52,13 @@ def commander(server_instance=None):
         elif data[:5] == "sayto":
             try:
                 addr, port, message = data[6:].split(" ", 2)
-                if re.match(IPV4_MATCH, addr) and (0 < int(port) < 65535) and message is not "":
-                    server_instance.speak(data=message, to=(addr, int(port)))
+                if ipv4_check(addr) and port_check(port) and message is not "":
+                    print 'should sleep'
+                    server_instance.send_text(data=message, to=(addr, int(port)))
+                    print 'have i slept? '
             except Exception as ex:
                 print ex
+        elif data[:6] == "callto":
+            addr, port = data[6:].split(" ")
+            if ipv4_check(addr) and port_check(port):
+                pass
