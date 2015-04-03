@@ -47,18 +47,20 @@ def commander(server_instance=None):
     call = False
     while True:
         data = raw_input()
+        command = data.split(' ')
         if data == "exit":
             break
-        elif data[:5] == "sayto":
+        elif command[0] == "sayto":
             try:
-                addr, port, message = data[6:].split(" ", 2)
-                if ipv4_check(addr) and port_check(port) and message is not "":
-                    print 'should sleep'
+                addr, port, message = command[1:]
+                if ipv4_check(addr) and port_check(port) and message is not '':
                     server_instance.send_text(data=message, to=(addr, int(port)))
-                    print 'have i slept? '
             except Exception as ex:
                 print ex
-        elif data[:6] == "callto":
-            addr, port = data[6:].split(" ")
+        elif command[0] == "callto":
+            addr, port = command[1:3]
             if ipv4_check(addr) and port_check(port):
-                pass
+                prnt('Trying to initiate a call')
+                server_instance.send_text(data='callm', to=(addr, int(port)))
+                call = True
+                server_instance.enter_callmode()

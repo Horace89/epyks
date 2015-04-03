@@ -1,17 +1,20 @@
-from _socket import error as socket_error
 import threading
-from networking.server import UDPServer
 import console
-from Queue import Queue
+from _socket import error as socket_error
+from networking.server import UDPServer
+from client import player, recorder
+
 
 def console_listner(HOST, PORT):
     server = UDPServer((HOST, PORT))
-    t1 = threading.Thread(target=server.serve_forever, name='Echo')
-    t1.setDaemon(True)
-    t1.start()
-
+    srv_thread = threading.Thread(target=server.serve_forever, name='ServerThread')
+    playback_thread = threading.Thread(target=player, name='PlaybackThread')
+    recorder_thread = threading.Thread(target=recorder, name='RecordSoundThread')
+    # srv_thread.setDaemon(True)
+    srv_thread.start()
+    playback_thread.start()
+    recorder_thread.start()
     console.commander(server_instance=server)
-
     server.shutdown()
 
 
