@@ -14,7 +14,7 @@ import threading
 # OUTPUT will get filled by Server and get emptied by SoundIO
 # INPUT will get filled by SoundIO and emptied by Server
 #
-# Server                  Server
+#                  Server                  Server
 #           SoundIO  ^                        |   SoundIO
 #           | |      | |                    | |      ^ |
 #           | |      | |                    | |      | |
@@ -65,6 +65,7 @@ def player():
     print '[Player] <stream> inited'
     while not STOP_SOUND_IO.is_set():
         block = OUTPUT_QUEUE.get()
+        print 'PLAYER PLAYING'  # haters fighting, righteous praying!
         stream.write(block)
     print 'STOP_SOUND_IO triggered'
     stream.stop_stream()
@@ -81,6 +82,7 @@ def recorder():
     print '[Recorder] <stream> inited'
     while not STOP_SOUND_IO.is_set():
         block = stream.read(CHUNK)
+        print 'RECORDER RECORDING'
         INPUT_QUEUE.put(block)
     print 'STOP_SOUND_IO triggered'
     stream.stop_stream()

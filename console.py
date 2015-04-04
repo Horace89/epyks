@@ -64,3 +64,6 @@ def commander(server_instance=None):
                 server_instance.send_text(data='callm', to=(addr, int(port)))
                 call = True
                 server_instance.enter_callmode()
+        elif command[0] == "endcall":
+            server_instance.send_text(data='leave')
+            server_instance.leave_callmode()

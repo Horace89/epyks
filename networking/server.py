@@ -1,7 +1,8 @@
 import SocketServer
 import threading
-import time
-from client import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
+
+from sound.client import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
+
 
 class UDPServer(SocketServer.UDPServer):
     def __init__(self, server_address):
@@ -34,6 +35,7 @@ class UDPServer(SocketServer.UDPServer):
         This should call a request handler, but we are implementing it right here (for now)
         """
         data, socket = request  # request[0], request[1]
+        print 'Got data!'
         # TODO: watch at data protocol header
         if data[:5] == "callm":
             print 'Trying to enter callmode'
@@ -42,10 +44,10 @@ class UDPServer(SocketServer.UDPServer):
         elif data[:5] == "leave":
             self.leave_callmode()
             return
-        if self.__callmode:  # If we're in callmode, put incoming data into queue
+        if self.__callmode.is_set():  # If we're in callmode, put incoming data into queue
             OUTPUT_QUEUE.put(data)
         else:
-            print "<{}>: {}".format(socket, data)
+            print "<{}>: {}".format(client_address[0], data)
 
     def enter_callmode(self):
         # TODO: locks
@@ -56,5 +58,6 @@ class UDPServer(SocketServer.UDPServer):
 
     def leave_callmode(self):
         # TODO: locks
+        print 'Leaving callmode'
         self.__callmode.clear()
         STOP_SOUND_IO.set()

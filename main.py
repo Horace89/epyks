@@ -1,8 +1,9 @@
 import threading
-import console
 from _socket import error as socket_error
+
+import console
 from networking.server import UDPServer
-from client import player, recorder
+from sound.client import player, recorder
 
 
 def console_listner(HOST, PORT):
