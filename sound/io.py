@@ -23,6 +23,7 @@ import threading
 #            ----------                      ----------
 #
 # Also we would like to have trigger that tells us to stop SoundIO, which is STOP_SOUND_IO Event
+# And we want to know when to start capture, START_SOUND_IO event serves this
 
 OUTPUT_QUEUE = Queue.Queue()
 INPUT_QUEUE = Queue.Queue()

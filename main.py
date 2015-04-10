@@ -3,7 +3,7 @@ from _socket import error as socket_error
 
 import console
 from networking.server import UDPServer
-from sound.client import player, recorder
+from sound.io import player, recorder
 
 
 def console_listner(HOST, PORT):

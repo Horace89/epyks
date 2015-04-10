@@ -1,7 +1,7 @@
 import SocketServer
 import threading
 
-from sound.client import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
+from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
 
 
 class UDPServer(SocketServer.UDPServer):
