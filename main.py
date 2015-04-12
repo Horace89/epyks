@@ -11,7 +11,7 @@ from sound.io import player, recorder
 # All this module should do is to define whether GUI version
 # should be used or vannila-console
 
-HOST, PORT = 'localhost', 8888
+HOST, PORT = '', 8888
 #
 # def console_listner(HOST, PORT):
 # server = UDPServer((HOST, PORT))

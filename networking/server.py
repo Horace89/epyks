@@ -1,4 +1,5 @@
 import SocketServer
+import socket
 import threading
 
 from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
@@ -30,6 +31,9 @@ from . import messages
 class UDPServer(SocketServer.UDPServer):
     def __init__(self, server_address):
         SocketServer.UDPServer.__init__(self, server_address, None)  # We are handling requests right inside server
+        #self.socket = socket.socket(socket.AF_INET,
+        #                            socket.SOCK_DGRAM,)
+                                    #socket.IPPROTO_UDP)
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
         self.interlocutor = None
         self.output_thread = threading.Thread(target=self.send_chunks, name="Chunk_sending_thread")
