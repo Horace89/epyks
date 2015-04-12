@@ -69,5 +69,4 @@ def initialize(server_instance, server_thread, playback_thread, record_thread):
     """
     """
     greetings()
-    server_thread.start()
     commander(server_instance)
