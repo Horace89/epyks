@@ -59,8 +59,10 @@ class UDPServer(SocketServer.UDPServer):
             chunk = INPUT_QUEUE.get()
             print 'got queue, sending'
             if not self.interlocutor:
+                print 'no interlocutor, breaking'
                 break
             self.socket.sendto(chunk, self.interlocutor)
+            print 'tried to send'
 
     def finish_request(self, request, client_address):
         """
