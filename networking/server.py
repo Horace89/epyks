@@ -36,6 +36,7 @@ class UDPServer(SocketServer.UDPServer):
         self.__callmode = threading.Event()
         self.__trying_to_call = False
         self.__trying_to_answer = False
+        self.interlocutor_lock = threading.RLock()
 
     def send_text(self, data="ping", to=None):
         try:
@@ -53,6 +54,8 @@ class UDPServer(SocketServer.UDPServer):
             print 'callmode accessed, getting queue'
             chunk = INPUT_QUEUE.get()
             print 'got queue, sending'
+            if not self.interlocutor:
+                break
             self.socket.sendto(chunk, self.interlocutor)
 
     def finish_request(self, request, client_address):
@@ -112,14 +115,18 @@ class UDPServer(SocketServer.UDPServer):
         self.send_text(data=messages.CHAO, to=self.interlocutor)
 
     def leave_call(self):
+        print "trying to end call"
         self.bg_send_chao()
         self.refresh_status()
+        print "call ended"
 
     def refresh_status(self):
+        print "trying to refresh status"
         self.__trying_to_answer = False
         self.__trying_to_call = False
         self.leave_callmode()
         self.interlocutor = None
+        print "status refreshed"
 
     def enter_callmode(self):
         # TODO: locks
