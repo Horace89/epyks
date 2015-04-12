@@ -7,7 +7,7 @@ import threading
 # Shit works like this:
 #
 # -> -> ClientA.Record(CHUNK_SIZE) -> CHUNK -> INPUT_QUEUE_A.PUT(CHUNK) -> ClientA.Send(INPUT_QUEUE_A.get()) ->
-# -------------------------------------- MEANWHILE ON CLIENT B ---------------------------------------  |
+# -------------------------------------- MEANWHILE ON CLIENT B ---------------------------------------        |
 # < -<- ClientB.Play(CHUNK)  <-  OUTPUT_QUEUE_B.PUT(CHUNK)  <- CHUNK <- ClientB.RecV(CHUNK_SIZE)<- <- <- <- <-
 #
 # So we need two Queues on each server: output and input

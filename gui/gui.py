@@ -27,14 +27,14 @@ class MainForm(npyscreen.Form):
         super(MainForm, self).create()
         self.name = self.add(npyscreen.TitleText, name="username", value="username")
         self.call_to = self.add(npyscreen.TitleText, name="call to", value="192.168.0.102:8889")
-        self.nextrelx += 40
-        self.nextrely -= 1
-        self.call_button = self.add(npyscreen.ButtonPress, name="call", when_pressed_function="a")
+        self.call_button = self.add(npyscreen.Button, name="call", when_pressed_function="a")
         self.parentApp.setNextForm('username_form')
 
     def afterEditing(self):
         self.parentApp.setNextForm(None)
 
+    def start_call(self):
+        self.parentApp.server.enter_callmode()
 
 # noinspection PyAttributeOutsideInit
 class IntroduceYourself(npyscreen.Popup):
@@ -50,11 +50,12 @@ class IntroduceYourself(npyscreen.Popup):
 
 
 class Application(npyscreen.NPSAppManaged):
-    def __init__(self, server_t, playback_t, record_t):
+    def __init__(self, server_instance, server_thread, playback_thread, record_thread):
         super(Application, self).__init__()
-        self.server_t = server_t
-        self.playback_t = playback_t
-        self.record_t = record_t
+        self.server = server_instance
+        self.server_thread = server_thread
+        self.playback_thread = playback_thread
+        self.record_thread = record_thread
         self.mainform = None
 
     def onStart(self):
@@ -69,5 +70,5 @@ class Application(npyscreen.NPSAppManaged):
 #     return 'Recotd for: ' + F.name.value
 
 
-def initialize(threads):
-    Application(*threads).run()
+def initialize(**components):
+    Application(**components).run()

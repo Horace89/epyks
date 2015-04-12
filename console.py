@@ -61,9 +61,6 @@ def commander(server_instance=None):
             addr, port = command[1:3]
             if ipv4_check(addr) and port_check(port):
                 prnt('Trying to initiate a call')
-                server_instance.send_text(data='callm', to=(addr, int(port)))
-                call = True
-                server_instance.enter_callmode()
+                server_instance.initiate_call(address=(addr, port))
         elif command[0] == "endcall":
-            server_instance.send_text(data='leave')
-            server_instance.leave_callmode()
+                server_instance.leave_call()

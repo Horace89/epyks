@@ -26,15 +26,27 @@ HOST, PORT = 'localhost', 8888
 #     server.shutdown()
 
 
-def initialize_threads():
-    server = UDPServer((HOST, PORT))
+def initialize_threads_and_server():
+    global PORT
+    server = None
+    while True:
+        try:
+            server = UDPServer((HOST, PORT))
+            break
+        except socket_error:
+            PORT += 1
     server_t = threading.Thread(target=server.serve_forever, name='ServerThread')
     playback_t = threading.Thread(target=player, name='PlaybackThread')
     recorder_t = threading.Thread(target=recorder, name='RecordSoundThread')
     server_t.setDaemon(True)
     playback_t.setDaemon(True)
     recorder_t.setDaemon(True)
-    return server_t, playback_t, recorder_t
+    return {
+        "server_instance": server,
+        "server_thread": server_t,
+        "playback_thread": playback_t,
+        "record_thread": recorder_t,
+    }
 
 
 def main():
@@ -49,11 +61,11 @@ def main():
     if mode not in modes:
         print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
         return
-    threads = initialize_threads()
+    components = initialize_threads_and_server()
     if mode == '-console':
-        console.initialize(threads)
+        console.initialize(**components)
     elif mode == '-gui':
-        gui.initialize(threads)
+        gui.initialize(**components)
     else:
         print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
 
