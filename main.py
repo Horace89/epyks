@@ -14,7 +14,7 @@ from sound.io import player, recorder
 HOST, PORT = 'localhost', 8888
 #
 # def console_listner(HOST, PORT):
-#     server = UDPServer((HOST, PORT))
+# server = UDPServer((HOST, PORT))
 #     srv_thread = threading.Thread(target=server.serve_forever, name='ServerThread', daemon=True)
 #     playback_thread = threading.Thread(target=player, name='PlaybackThread')
 #     recorder_thread = threading.Thread(target=recorder, name='RecordSoundThread')
@@ -26,6 +26,17 @@ HOST, PORT = 'localhost', 8888
 #     server.shutdown()
 
 
+def initialize_threads():
+    server = UDPServer((HOST, PORT))
+    server_t = threading.Thread(target=server.serve_forever, name='ServerThread')
+    playback_t = threading.Thread(target=player, name='PlaybackThread')
+    recorder_t = threading.Thread(target=recorder, name='RecordSoundThread')
+    server_t.setDaemon(True)
+    playback_t.setDaemon(True)
+    recorder_t.setDaemon(True)
+    return server_t, playback_t, recorder_t
+
+
 def main():
     mode = '-console'  # default mode
     modes = ('-console', '-gui')
@@ -34,25 +45,18 @@ def main():
     except IndexError:
         # Using default
         pass
+
+    if mode not in modes:
+        print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
+        return
+    threads = initialize_threads()
     if mode == '-console':
-        console.initialize()
+        console.initialize(threads)
     elif mode == '-gui':
-        gui.initialize()
+        gui.initialize(threads)
     else:
         print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
 
 
 if __name__ == '__main__':
     main()
-#
-# if __name__ == '__main__a':
-#     console.greetings()
-#     HOST, PORT = 'localhost', 8888
-#     while True:
-#         try:
-#             console_listner(HOST, PORT)
-#             break
-#         except socket_error as ex:
-#             if ex.errno == 98:
-#                 print "Port {} already in use, trying out next".format(PORT)
-#                 PORT += 1
