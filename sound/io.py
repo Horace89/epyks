@@ -65,6 +65,7 @@ def player():
     stream = PA.open(**OUTPUT_PARAMS)
     print '[Player] <stream> inited'
     while not STOP_SOUND_IO.is_set():
+        print 'acessing output_queue'
         block = OUTPUT_QUEUE.get()
         print 'PLAYER PLAYING'  # haters fighting, righteous praying!
         stream.write(block)

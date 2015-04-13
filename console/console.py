@@ -33,6 +33,7 @@ def greetings():
     prnt()
     prnt("To get list of commands type {}".format(wrap(BOLD, "help")))
     prnt()
+    prnt("callto 192.168.0.102 888")
     prnt("Your 'eth0' address is: {}".format(wrap(BOLD, get_local_addr())))
     prnt('-' * 80)
 
@@ -43,7 +44,7 @@ def ipv4_check(addr):
 def port_check(port):
     return 0 < int(port) < 65535
 
-def commander(server_instance=None):
+def commander(caller_instance=None):
     call = False
     while True:
         data = raw_input()
@@ -54,19 +55,19 @@ def commander(server_instance=None):
             try:
                 addr, port, message = command[1:]
                 if ipv4_check(addr) and port_check(port) and message is not '':
-                    server_instance.send_text(data=message, to=(addr, int(port)))
+                    caller_instance._send_text(data=message, to=(addr, int(port)))
             except Exception as ex:
                 print ex
         elif command[0] == "callto":
             addr, port = command[1:3]
             if ipv4_check(addr) and port_check(port):
                 prnt('Trying to initiate a call')
-                server_instance.initiate_call(address=(addr, int(port)))
+                caller_instance.call(address=(addr, int(port)))
         elif command[0] == "endcall":
-                server_instance.leave_call()
+                caller_instance.hang_up()
 
-def initialize(server_instance, server_thread, playback_thread, record_thread):
+def initialize(caller_instance, server_thread, playback_thread, record_thread):
     """
     """
     greetings()
-    commander(server_instance)
+    commander(caller_instance)

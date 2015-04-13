@@ -4,145 +4,154 @@ import threading
 
 from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
 from . import messages
-#
-#
-# class Caller(object):
-#     def __init__(self, ip, port):
-#         self.server = UDPServer((ip, port))
-#         self.interlocutor = None
-#         self.__enter_callmode = None
-#
-#     def send_wanna_talk(self, address=None):
-#         pass
-#
-#     def recieve_wtal_answer(self):
-#         pass
-#
-#     def send_call(self):
-#         pass
-#
-#     def initiate_call(self):
-#         self.send_wanna_talk()
-#         self.recieve_wtal_answer()
-#         self.send_call()
-#         self.__enter_callmode()
 
 
-class UDPServer(SocketServer.UDPServer):
-    def __init__(self, server_address):
-        SocketServer.UDPServer.__init__(self, server_address, None)  # We are handling requests right inside server
-        #self.socket = socket.socket(socket.AF_INET,
-        #                            socket.SOCK_DGRAM,)
-                                    #socket.IPPROTO_UDP)
+class Server(SocketServer.UDPServer):
+    def __init__(self, server_address, parent_caller, RequestHandlerClass=None):
+        """
+        :param caller: instance of Caller that we are passing to be able
+        """
+        SocketServer.UDPServer.__init__(self, server_address=server_address, RequestHandlerClass=None)
+        # We are handling requests right inside server
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
-        self.interlocutor = None
-        self.output_thread = threading.Thread(target=self.send_chunks, name="Chunk_sending_thread")
-        self.__callmode = threading.Event()
-        self.__trying_to_call = False
-        self.__trying_to_answer = False
-        self.interlocutor_lock = threading.RLock()
+        self.parent_caller = parent_caller
 
-    def send_text(self, data="ping", to=None):
+    def _send_text(self, data="ping", to=None):
         try:
             if to:
-                self.interlocutor = to
+                self.parent_caller.interlocutor = to
                 self.socket.sendto(data, to)
             else:
-                self.socket.sendto(data, self.interlocutor)
+                self.socket.sendto(data, self.parent_caller.interlocutor)
         except Exception as ex:
             print ex
 
-    def send_chunks(self):
+    def _send_chunks(self):
         print 'Output thread started, accessing self.__callmode'
-        while self.__callmode.is_set():
+        while self.parent_caller.callmode.is_set():
             print 'callmode accessed, getting queue'
             chunk = INPUT_QUEUE.get()
             print 'got queue, sending'
-            if not self.interlocutor:
+            if not self.parent_caller.interlocutor:
                 print 'no interlocutor, breaking'
                 break
-            self.socket.sendto(chunk, self.interlocutor)
+            self.socket.sendto(chunk, self.parent_caller.interlocutor)
             print 'tried to send'
+        print 'no callmode?'
 
     def finish_request(self, request, client_address):
         """
         This should call a request handler, but we are implementing it right here (for now)
         """
-        # TODO: watch at data protocol header
-        data, socket = request  # request[0], request[1]
+        data, sock = request  # request[0], request[1]
         print 'Got data!'
+        # TODO: watch at data protocol header
+        self.parent_caller.parse_data(data=data, sock=sock, address=client_address)
+
+
+
+
+class Caller(Server):
+    def __init__(self, ip, port):
+        Server.__init__(self, server_address=(ip, port), parent_caller=self, RequestHandlerClass=None)
+        self.output_thread = threading.Thread(target=self._send_chunks, name="Chunk sending thread")
+        self.interlocutor = None
+        self.callmode = threading.Event()
+        self.__trying_to_call = False
+        self.__trying_to_answer = False
+
+    def call(self, address):
+        """
+        Trying to call address
+        :param address: where are we tryping to connect, tuple i.e. (ip, port)
+        :return:
+        """
+        # check address
+        self.__initiate_call(address=address)
+
+    def hang_up(self):
+        """
+        Stops the call
+        :return:
+        """
+        self._leave_call()
+
+    def send(self, message, address=None):
+        address = address or self.interlocutor
+        self._send_text(data=message, to=address)
+
+    def parse_data(self, data, sock, address):
         command = data[:4]
-        self.interlocutor = client_address
-        # { initiating a call block
+        self.interlocutor = address
+        # if we are initiating a call
         if command == messages.WTAL:
             self.__trying_to_answer = True
             # TODO: leave user a choice to refuse
-            self.bg_send_sure()
+            self._send_sure()
         if self.__trying_to_call:
             if command == messages.SURE:
-                self.bg_send_call()
-                self.enter_callmode()
+                self._send_call()
+                self.__enter_callmode()
             elif command == messages.NOTY:
-                self.refresh_status()
+                self.__refresh_status()
         elif self.__trying_to_answer:
             if command == messages.CALL:
-                self.enter_callmode()
-        # }
+                self.__enter_callmode()
 
-        # ending call block {
+        #  if we are ending call
         if command == messages.CHAO:
-            self.refresh_status()
-        # }
+            self.__refresh_status()
 
-        if self.__callmode.is_set():  # If we're in callmode, put incoming data into queue
+        if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
             OUTPUT_QUEUE.put(data)
         else:
-            print "<{}>: {}".format(client_address[0], data)
+            print "<{ip} {port}>: {message}".format(ip=address[0], port=address[1], message=data)
 
-    def initiate_call(self, address):
+    def __initiate_call(self, address):
         self.interlocutor = address
         self.__trying_to_call = True
-        self.bg_send_wtal()
+        self._send_wtal()
 
-    def bg_send_wtal(self):
-        """
-        Function that sends "wanna talk" message
-        """
+    def _send_wtal(self):
         print 'sending wtal'
-        self.send_text(data=messages.WTAL, to=self.interlocutor)
+        self._send_text(data=messages.WTAL, to=self.interlocutor)
 
-    def bg_send_sure(self):
-        self.send_text(data=messages.SURE, to=self.interlocutor)
+    def _send_sure(self):
+        print 'sending sure'
+        self._send_text(data=messages.SURE, to=self.interlocutor)
 
-    def bg_send_call(self):
-        self.send_text(data=messages.CALL, to=self.interlocutor)
+    def _send_call(self):
+        print 'sending call'
+        self._send_text(data=messages.CALL, to=self.interlocutor)
 
-    def bg_send_chao(self):
-        self.send_text(data=messages.CHAO, to=self.interlocutor)
+    def _send_chao(self):
+        print 'sending chao'
+        self._send_text(data=messages.CHAO, to=self.interlocutor)
 
-    def leave_call(self):
+    def _leave_call(self):
         print "trying to end call"
-        self.bg_send_chao()
-        self.refresh_status()
+        self._send_chao()
+        self.__refresh_status()
         print "call ended"
 
-    def refresh_status(self):
+    def __refresh_status(self):
         print "trying to refresh status"
         self.__trying_to_answer = False
         self.__trying_to_call = False
-        self.leave_callmode()
+        self.__leave_callmode()
         self.interlocutor = None
         print "status refreshed"
 
-    def enter_callmode(self):
+    def __enter_callmode(self):
         # TODO: locks
-        self.__callmode.set()
+        #STOP_SOUND_IO.clear()
+        self.callmode.set()
         START_SOUND_IO.set()
         print 'Callmode vars are set, trying to start output_thread'
         self.output_thread.start()
 
-    def leave_callmode(self):
+    def __leave_callmode(self):
         # TODO: locks
         print 'Leaving callmode'
-        self.__callmode.clear()
+        self.callmode.clear()
         STOP_SOUND_IO.set()
