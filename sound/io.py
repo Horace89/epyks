@@ -65,9 +65,9 @@ def player():
     stream = PA.open(**OUTPUT_PARAMS)
     print '[Player] <stream> inited'
     while not STOP_SOUND_IO.is_set():
-        print 'acessing output_queue'
+        # print 'acessing output_queue'
         block = OUTPUT_QUEUE.get()
-        print 'PLAYER PLAYING'  # haters fighting, righteous praying!
+        # print 'PLAYER PLAYING'  # haters fighting, righteous praying!
         stream.write(block)
     print 'STOP_SOUND_IO triggered'
     stream.stop_stream()
@@ -84,7 +84,7 @@ def recorder():
     print '[Recorder] <stream> inited'
     while not STOP_SOUND_IO.is_set():
         block = stream.read(CHUNK)
-        print 'RECORDER RECORDING'
+        # print 'RECORDER RECORDING'
         INPUT_QUEUE.put(block)
     print 'STOP_SOUND_IO triggered'
     stream.stop_stream()

@@ -29,14 +29,14 @@ class Server(SocketServer.UDPServer):
     def _send_chunks(self):
         print 'Output thread started, accessing self.__callmode'
         while self.parent_caller.callmode.is_set():
-            print 'callmode accessed, getting queue'
+            #print 'callmode accessed, getting queue'
             chunk = INPUT_QUEUE.get()
-            print 'got queue, sending'
+            #print 'got queue, sending'
             if not self.parent_caller.interlocutor:
                 print 'no interlocutor, breaking'
                 break
             self.socket.sendto(chunk, self.parent_caller.interlocutor)
-            print 'tried to send'
+            #print 'tried to send'
         print 'no callmode?'
 
     def finish_request(self, request, client_address):
@@ -44,7 +44,7 @@ class Server(SocketServer.UDPServer):
         This should call a request handler, but we are implementing it right here (for now)
         """
         data, sock = request  # request[0], request[1]
-        print 'Got data!'
+        #print 'Got data!'
         # TODO: watch at data protocol header
         self.parent_caller.parse_data(data=data, sock=sock, address=client_address)
 

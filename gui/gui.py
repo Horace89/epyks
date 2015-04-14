@@ -1,7 +1,8 @@
-
+import functools
 import os
 import npyscreen
 from networking import base
+import pdb
 
 #
 # #
@@ -23,11 +24,18 @@ from networking import base
 class MainForm(npyscreen.Form):
     OK_BUTTON_TEXT = "EXIT"  # well...
 
+    def __init__(self, *args, **kwargs):
+        self.callfunc = kwargs['call_func']
+        super(MainForm, self).__init__(*args, **kwargs)
+
     def create(self):
         super(MainForm, self).create()
-        self.name = self.add(npyscreen.TitleText, name="username", value="username")
+#        self.is_field_here()
+        self.name = self.add(npyscreen.TitleText, name="username")
         self.call_to = self.add(npyscreen.TitleText, name="call to", value="192.168.0.102:8889")
-        self.call_button = self.add(npyscreen.Button, name="call", when_pressed_function="a")
+        self.call_button = self.add(npyscreen.Button, name="call",
+                                    when_pressed_function=self.callfunc(self.call_to.value))
+                                    #when_pressed_function=self.parentApp.caller_instance.call(self.call_to.value))
         self.parentApp.setNextForm('username_form')
 
     def afterEditing(self):
@@ -50,16 +58,18 @@ class IntroduceYourself(npyscreen.Popup):
 
 
 class Application(npyscreen.NPSAppManaged):
-    def __init__(self, server_instance, server_thread, playback_thread, record_thread):
-        super(Application, self).__init__()
-        self.server = server_instance
+    def __init__(self, caller_instance, server_thread, playback_thread, record_thread):
+        # Somehow npyscreen __init__() method is not allowing us to create our fields AFTER
+        # call of __init__(), so we are doing it right here
+        self.caller_instance = caller_instance
         self.server_thread = server_thread
         self.playback_thread = playback_thread
         self.record_thread = record_thread
         self.mainform = None
+        super(Application, self).__init__()
 
     def onStart(self):
-        self.addForm('MAIN', MainForm, name="Main form")
+        self.addForm('MAIN', MainForm, name="Main form", call_func=self.caller_instance.call)
         self.addForm('username_form', IntroduceYourself, name="Choose username")
         self.mainform = self.getForm('MAIN')  # Dont know how to bind it other way
 
