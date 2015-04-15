@@ -67,6 +67,7 @@ class Caller(Server):
         :return:
         """
         # check address
+        print 'entered callfuncion'
         self.__initiate_call(address=address)
 
     def hang_up(self):
@@ -110,6 +111,7 @@ class Caller(Server):
     def __initiate_call(self, address):
         self.interlocutor = address
         self.__trying_to_call = True
+        print 'Caller variabels set'
         self._send_wtal()
 
     def _send_wtal(self):

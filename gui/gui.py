@@ -32,11 +32,18 @@ class MainForm(npyscreen.Form):
         super(MainForm, self).create()
 #        self.is_field_here()
         self.name = self.add(npyscreen.TitleText, name="username")
-        self.call_to = self.add(npyscreen.TitleText, name="call to", value="192.168.0.102:8889")
-        self.call_button = self.add(npyscreen.Button, name="call",
-                                    when_pressed_function=self.callfunc(self.call_to.value))
-                                    #when_pressed_function=self.parentApp.caller_instance.call(self.call_to.value))
+        self.call_to_addr = self.add(npyscreen.TitleText, name="call to addr", value="192.168.0.102")
+        self.call_to_port = self.add(npyscreen.TitleText, name="call to port", value="8889")
+        self.call_button = self.add(npyscreen.ButtonPress, name="call",
+                                    #when_pressed_function=self.callfunc(self.call_to.value))
+                                    when_pressed_function=self.makecall)
         self.parentApp.setNextForm('username_form')
+
+    def makecall(self):
+        print 'when pressed'
+        ip = self.call_to_addr.value
+        port = int(self.call_to_port.value)
+        self.parentApp.caller_instance.call((ip, port))
 
     def afterEditing(self):
         self.parentApp.setNextForm(None)

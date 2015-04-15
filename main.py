@@ -20,9 +20,9 @@ def initialize_threads_and_server():
     while True:
         try:
             caller_instance = Caller(HOST, PORT)
-            break
         except socket_error:
             PORT += 1
+        break
 
     server_thread = threading.Thread(target=caller_instance.serve_forever, name='Server thread')
     playback_thread = threading.Thread(target=player, name='Playback thread')
