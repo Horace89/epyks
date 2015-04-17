@@ -28,16 +28,20 @@ class Server(SocketServer.UDPServer):
 
     def _send_chunks(self):
         print 'Output thread started, accessing self.__callmode'
-        while self.parent_caller.callmode.is_set():
-            #print 'callmode accessed, getting queue'
-            chunk = INPUT_QUEUE.get()
-            #print 'got queue, sending'
-            if not self.parent_caller.interlocutor:
-                print 'no interlocutor, breaking'
-                break
-            self.socket.sendto(chunk, self.parent_caller.interlocutor)
-            #print 'tried to send'
-        print 'no callmode?'
+        while not self.parent_caller.callmode.is_set():
+            print 'WAITING FOR CALLMODE'
+            self.parent_caller.callmode.wait()
+            while self.parent_caller.callmode.is_set():
+                #print 'callmode accessed, getting queue'
+                chunk = INPUT_QUEUE.get()
+                #print 'got queue, sending'
+                if not self.parent_caller.interlocutor:
+                    print 'no interlocutor, breaking'
+                    break
+                self.socket.sendto(chunk, self.parent_caller.interlocutor)
+                #print 'tried to send'
+            print 'CALLMODE EXIT'
+        print "send_chunks thread exit"
 
     def finish_request(self, request, client_address):
         """
@@ -51,14 +55,15 @@ class Server(SocketServer.UDPServer):
 
 
 
-class Caller(Server):
+class Caller(Server, object):
     def __init__(self, ip, port):
         Server.__init__(self, server_address=(ip, port), parent_caller=self, RequestHandlerClass=None)
-        self.output_thread = threading.Thread(target=self._send_chunks, name="Chunk sending thread")
         self.interlocutor = None
         self.callmode = threading.Event()
         self.__trying_to_call = False
         self.__trying_to_answer = False
+        self.output_thread = threading.Thread(target=self._send_chunks, name="Chunk sending thread")
+        self.output_thread.start() # Won't work since callmode is not set
 
     def call(self, address):
         """
@@ -73,13 +78,28 @@ class Caller(Server):
     def hang_up(self):
         """
         Stops the call
-        :return:
         """
         self._leave_call()
 
     def send(self, message, address=None):
         address = address or self.interlocutor
         self._send_text(data=message, to=address)
+
+    @property
+    def status(self):
+        if self.callmode.is_set():
+            return "On call"
+        if self.__trying_to_call or self.__trying_to_answer:
+            return "Connecting"
+        return "Not connected"
+
+    @property
+    def port(self):
+        return self.server_address[1]
+
+    @port.setter
+    def port(self, value):
+        raise NotImplementedError
 
     def parse_data(self, data, sock, address):
         command = data[:4]
@@ -145,15 +165,14 @@ class Caller(Server):
         print "status refreshed"
 
     def __enter_callmode(self):
-        # TODO: locks
-        #STOP_SOUND_IO.clear()
+        STOP_SOUND_IO.clear()
         self.callmode.set()
         START_SOUND_IO.set()
-        print 'Callmode vars are set, trying to start output_thread'
-        self.output_thread.start()
+        print 'Callmode vars are set'
 
     def __leave_callmode(self):
-        # TODO: locks
         print 'Leaving callmode'
         self.callmode.clear()
+        START_SOUND_IO.clear()
         STOP_SOUND_IO.set()
+
