@@ -2,7 +2,6 @@ import Queue
 import pyaudio
 import threading
 
-
 # ---- Queues
 # Shit works like this:
 #
@@ -29,6 +28,7 @@ OUTPUT_QUEUE = Queue.Queue()
 INPUT_QUEUE = Queue.Queue()
 STOP_SOUND_IO = threading.Event()
 START_SOUND_IO = threading.Event()
+SHUTDOWN = threading.Event()
 
 # ---- SoundIO settings
 # We want this to be global, since we might want to change them on the fly
@@ -54,6 +54,45 @@ OUTPUT_PARAMS = {  # Pretty much same as input
 }
 
 PA = pyaudio.PyAudio()
+
+
+def perform_play(queue, stream):
+    stream.write(queue.get())
+
+
+def perform_record(queue, stream):
+    queue.put(stream.read(CHUNK))
+
+
+def sound_io_worker(io_type=None):
+    """
+    :param io_type: 0 - input, 0 - output
+    :type io_type int:
+    :return:
+    """
+    if io_type == 1:
+        perform_io = perform_play
+        queue = INPUT_QUEUE
+        params = INPUT_PARAMS
+        worker = "recorder"
+    else:
+        perform_io = perform_record
+        queue = OUTPUT_QUEUE
+        params = OUTPUT_PARAMS
+        worker = "player"
+    print '[IO WORKER {}] initiating, start_io: {}, waiting to be set'.format(worker, START_SOUND_IO.is_set())
+    while not SHUTDOWN.is_set():
+        START_SOUND_IO.wait()
+        print '[IO WORKER {}] started, start_io: {}'.format(worker, START_SOUND_IO.is_set())
+        stream = PA.open(**params)
+        print '[IO WORKER {}] <stream> inited'.format(worker)
+        while not STOP_SOUND_IO.is_set() or SHUTDOWN.is_set():
+            # print 'acessing output_queue'
+            perform_io(queue, stream)
+        print 'STOP_SOUND_IO triggered'
+        stream.stop_stream()
+        stream.close()
+
 
 
 def player():

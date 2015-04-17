@@ -6,16 +6,15 @@ from gui import gui, tkgui
 
 from _socket import error as socket_error
 from networking.server import Caller
-from sound.io import player, recorder
+from sound.io import player, recorder, sound_io_worker, INPUT_PARAMS, OUTPUT_PARAMS
 
-# All this module should do is to define whether GUI version
-# should be used or vannila-console
-
-HOST, PORT = '', 8888
+# All this module should do is to define whether GUI version should be used or vannila-console
 
 
+
+# noinspection PyPep8Naming
 def initialize_threads_and_server():
-    global PORT
+    HOST, PORT = '', 8888
     caller_instance = None
     while True:
         try:
@@ -25,8 +24,12 @@ def initialize_threads_and_server():
             PORT += 1
 
     server_thread = threading.Thread(target=caller_instance.serve_forever, name='Server thread')
-    playback_thread = threading.Thread(target=player, name='Playback thread')
-    record_thread = threading.Thread(target=recorder, name='Record sound thread')
+    playback_thread = threading.Thread(target=sound_io_worker,
+                                       kwargs={'sound_params': OUTPUT_PARAMS},
+                                       name='Playback thread')
+    record_thread = threading.Thread(target=sound_io_worker,
+                                     kwargs={'sound_params': INPUT_PARAMS},
+                                     name='Record sound thread')
 
     server_thread.setDaemon(True)
     playback_thread.setDaemon(True)
@@ -56,12 +59,16 @@ def main():
         print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
         return
     components = initialize_threads_and_server()
-    if mode == '-console':
-        console.initialize(**components)
-    elif mode == '-gui':
-        tkgui.initialize(components['caller_instance'])
-    else:
-        print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
+    try:
+        if mode == '-console':
+            console.initialize(**components)
+        elif mode == '-gui':
+            tkgui.initialize(components['caller_instance'])
+        else:
+            print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
+    except KeyboardInterrupt as ex:
+        SHUTDOWN.set()
+        raise ex
 
 
 if __name__ == '__main__':

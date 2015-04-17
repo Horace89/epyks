@@ -2,7 +2,7 @@ import SocketServer
 import socket
 import threading
 
-from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO
+from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO, SHUTDOWN
 from . import messages
 
 
@@ -28,20 +28,33 @@ class Server(SocketServer.UDPServer):
 
     def _send_chunks(self):
         print 'Output thread started, accessing self.__callmode'
-        while not self.parent_caller.callmode.is_set():
-            print 'WAITING FOR CALLMODE'
+        while not SHUTDOWN.is_set():
             self.parent_caller.callmode.wait()
-            while self.parent_caller.callmode.is_set():
-                #print 'callmode accessed, getting queue'
+            while self.parent_caller.callmode.is_set() and (not SHUTDOWN.is_set()):
+                print 'callmode accessed, getting queue'
                 chunk = INPUT_QUEUE.get()
-                #print 'got queue, sending'
+                print 'got queue, sending'
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
                 self.socket.sendto(chunk, self.parent_caller.interlocutor)
-                #print 'tried to send'
+                print 'tried to send'
             print 'CALLMODE EXIT'
-        print "send_chunks thread exit"
+        print 'SEND_CHUNKS EXIT'
+        #
+        # while not self.parent_caller.callmode.is_set():
+        #     print 'WAITING FOR CALLMODE'
+        #     self.parent_caller.callmode.wait()
+        #     while self.parent_caller.callmode.is_set():
+        #         #print 'callmode accessed, getting queue'
+        #         chunk = INPUT_QUEUE.get()
+        #         #print 'got queue, sending'
+        #         if not self.parent_caller.interlocutor:
+        #             print 'no interlocutor, breaking'
+        #             break
+        #         self.socket.sendto(chunk, self.parent_caller.interlocutor)
+        #         #print 'tried to send'
+        # print "send_chunks thread exit"
 
     def finish_request(self, request, client_address):
         """

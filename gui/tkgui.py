@@ -4,6 +4,7 @@ import re
 from ttk import Frame, Button, Style, Entry, Label
 import tkMessageBox
 from mock import Mock
+from sound.io import SHUTDOWN
 from networking.base import get_local_addr
 
 ACCEPTABLE_CHARS = "1234567890:."
@@ -116,6 +117,7 @@ def initialize(caller_instance):
     app = MainForm(parent=root, caller_instance=caller_instance)
     root.after(ms=100, func=app.checkStatus)
     root.mainloop()
+    SHUTDOWN.set()
 
 if __name__ == '__main__':
     caller_instance = Mock
