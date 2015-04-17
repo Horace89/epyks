@@ -5,10 +5,17 @@ from ttk import Frame, Button, Style, Entry
 import tkMessageBox
 
 ACCEPTABLE_CHARS = "1234567890:."
-IPV4_RE = "(?:[0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}"
+IPV4_RE = re.compile(ur'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
+
+
+def full_ipv4_check(fulladdr):
+    if ':' not in fulladdr:
+        return False
+    ip, port = fulladdr.split(':')
+    return True if IPV4_RE.match(ip) and (1 < int(port) < 65536) else False
 
 # noinspection PyAttributeOutsideInit,PyPep8Naming,PyMethodMayBeStatic,PyShadowingBuiltins
-class Example(Frame):
+class MainForm(Frame):
     """
     If method is handling some GUI shit, its written in camelCase style
     """
@@ -31,30 +38,30 @@ class Example(Frame):
         #
         #   Addr textbox
         #
-        addr_validate = (self.parent.register(self.addrValidation), '%S',)
+        addr_validate = (self.parent.register(self.addrValidation), '%S', '%d')
         self.EntryAddress = Entry(self, validate='key', validatecommand=addr_validate)
         self.EntryAddress.delete(0, END)
         self.EntryAddress.insert(0, "192.168.0.102:8889")
-        #self.EntryAddress.pack()
         self.EntryAddress.place(x=10, y=50)
 
-    def addrValidation(self, input):
+    def addrValidation(self, input, action):
+        if action != 1:
+            # 0 - delete, 1 - insert, -1 - focus in/out
+            return True
         print "addrValidation: %s" % input
         if len(input) > 1:
-            return True if re.match(pattern=IPV4_RE, string=input) else False  # because module "re" returns SRE object, we need boolean
+            return full_ipv4_check(fulladdr=input)
         return input in ACCEPTABLE_CHARS
 
     def onTextBoxChange(self, *args, **kwargs):
         print 'lol ' + str(args) + str(kwargs)
 
-    def onButtonCallClick(self, *args, **kwargs):
-        addr = (self.EntryAddress.get())
-        print addr
-        print re.match(pattern=IPV4_RE, string=addr) is None
-        print re.match(pattern=IPV4_RE, string=addr) is not None
-        if not re.match(pattern=IPV4_RE, string=addr):
-            tkMessageBox.showerror(message="Incorrect ip address", title="Error")
-        tkMessageBox.showinfo(title="Call", message=str(args) + str(kwargs))
+    def onButtonCallClick(self):
+        address = (self.EntryAddress.get())
+        if not full_ipv4_check(fulladdr=address):
+            tkMessageBox.showerror(message="Incorrect address")
+        ip, port = address.split(':')
+        self.caller_instance.call((ip, int(port)))
 
     def __centerWindow(self):
         w = 300
@@ -68,7 +75,7 @@ class Example(Frame):
 def initialize(caller_instance):
     root = Tk()
     root.resizable(0, 0)
-    app = Example(parent=root, caller_instance=caller_instance)
+    app = MainForm(parent=root, caller_instance=caller_instance)
     root.mainloop()
 
 if __name__ == '__main__':

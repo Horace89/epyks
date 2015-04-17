@@ -2,7 +2,7 @@ import sys
 import threading
 
 from console import console
-from gui import gui
+from gui import gui, tkgui
 
 from _socket import error as socket_error
 from networking.server import Caller
@@ -20,9 +20,9 @@ def initialize_threads_and_server():
     while True:
         try:
             caller_instance = Caller(HOST, PORT)
+            break
         except socket_error:
             PORT += 1
-        break
 
     server_thread = threading.Thread(target=caller_instance.serve_forever, name='Server thread')
     playback_thread = threading.Thread(target=player, name='Playback thread')
@@ -59,7 +59,7 @@ def main():
     if mode == '-console':
         console.initialize(**components)
     elif mode == '-gui':
-        gui.initialize(**components)
+        tkgui.initialize(components['caller_instance'])
     else:
         print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
 

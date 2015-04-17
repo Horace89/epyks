@@ -63,8 +63,8 @@ class Caller(Server):
     def call(self, address):
         """
         Trying to call address
-        :param address: where are we tryping to connect, tuple i.e. (ip, port)
-        :return:
+        :param address: where are we tryping to connect
+        :type address tuple:
         """
         # check address
         print 'entered callfuncion'
