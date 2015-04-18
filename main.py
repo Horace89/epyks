@@ -6,7 +6,7 @@ from gui import gui, tkgui
 
 from _socket import error as socket_error
 from networking.server import Caller
-from sound.io import sound_io_worker, INPUT_PARAMS, OUTPUT_PARAMS
+from sound.io import sound_io_worker, SHUTDOWN
 
 # All this module should do is to define whether GUI version should be used or vannila-console
 
@@ -69,6 +69,8 @@ def main():
     except KeyboardInterrupt as ex:
         SHUTDOWN.set()
         raise ex
+    components['caller_instance'].shutdown()
+    print 'Should all stop now? '
 
 
 if __name__ == '__main__':

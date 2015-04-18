@@ -29,17 +29,19 @@ class Server(SocketServer.UDPServer):
     def _send_chunks(self):
         print 'Output thread started, accessing self.__callmode'
         while not SHUTDOWN.is_set():
-            self.parent_caller.callmode.wait()
+            self.parent_caller.callmode.wait(timeout=0.2)
             while self.parent_caller.callmode.is_set() and (not SHUTDOWN.is_set()):
                 print 'callmode accessed, getting queue'
-                chunk = INPUT_QUEUE.get()
+                chunk = INPUT_QUEUE.get(timeout=1)
+                if not chunk:
+                    continue
                 print 'got queue, sending'
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
                 self.socket.sendto(chunk, self.parent_caller.interlocutor)
                 print 'tried to send'
-            print 'CALLMODE EXIT'
+            print 'SEND_CHUNKS CALLMODE BLOCK END'
         print 'SEND_CHUNKS EXIT'
         #
         # while not self.parent_caller.callmode.is_set():
@@ -97,6 +99,11 @@ class Caller(Server, object):
     def send(self, message, address=None):
         address = address or self.interlocutor
         self._send_text(data=message, to=address)
+
+    def shutdown(self):
+        print 'trying to shut down'
+        Server.shutdown(self)
+        print 'now it should be stopped... i guess..'
 
     @property
     def status(self):

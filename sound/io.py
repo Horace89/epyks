@@ -57,11 +57,15 @@ PA = pyaudio.PyAudio()
 
 
 def perform_play(queue, stream):
-    stream.write(queue.get())
+    block = queue.get(timeout=1)
+    if (not block) or SHUTDOWN.is_set():
+        pass
+    stream.write(block)
 
 
 def perform_record(queue, stream):
-    queue.put(stream.read(CHUNK))
+    block = stream.read(CHUNK)
+    queue.put(block)
 
 
 def sound_io_worker(io_type=None):
@@ -82,13 +86,16 @@ def sound_io_worker(io_type=None):
         worker = "player"
     print '[IO WORKER {}] initiating, start_io: {}, waiting to be set'.format(worker, START_SOUND_IO.is_set())
     while not SHUTDOWN.is_set():
-        START_SOUND_IO.wait()
+        START_SOUND_IO.wait(timeout=1)
+        if not START_SOUND_IO.is_set():
+            continue
         print '[IO WORKER {}] started, start_io: {}'.format(worker, START_SOUND_IO.is_set())
         stream = PA.open(**params)
         print '[IO WORKER {}] <stream> inited'.format(worker)
         while not (STOP_SOUND_IO.is_set() or SHUTDOWN.is_set()):
             # print 'acessing output_queue'
             perform_io(queue, stream)
-        print 'STOP_SOUND_IO triggered'
+        print 'STOP_SOUND_IO or SHUT DOWN triggered'
         stream.stop_stream()
         stream.close()
+    print '[IO WORKER {}] shut down'.format(worker)
