@@ -25,10 +25,10 @@ def initialize_threads_and_server():
 
     server_thread = threading.Thread(target=caller_instance.serve_forever, name='Server thread')
     playback_thread = threading.Thread(target=sound_io_worker,
-                                       kwargs={'sound_params': OUTPUT_PARAMS},
+                                       kwargs={'io_type': 0},
                                        name='Playback thread')
     record_thread = threading.Thread(target=sound_io_worker,
-                                     kwargs={'sound_params': INPUT_PARAMS},
+                                     kwargs={'io_type': 1},
                                      name='Record sound thread')
 
     server_thread.setDaemon(True)

@@ -66,17 +66,17 @@ def perform_record(queue, stream):
 
 def sound_io_worker(io_type=None):
     """
-    :param io_type: 0 - input, 0 - output
+    :param io_type: 1 - record, 0 - play
     :type io_type int:
     :return:
     """
     if io_type == 1:
-        perform_io = perform_play
+        perform_io = perform_record
         queue = INPUT_QUEUE
         params = INPUT_PARAMS
         worker = "recorder"
     else:
-        perform_io = perform_record
+        perform_io = perform_play
         queue = OUTPUT_QUEUE
         params = OUTPUT_PARAMS
         worker = "player"
@@ -86,45 +86,9 @@ def sound_io_worker(io_type=None):
         print '[IO WORKER {}] started, start_io: {}'.format(worker, START_SOUND_IO.is_set())
         stream = PA.open(**params)
         print '[IO WORKER {}] <stream> inited'.format(worker)
-        while not STOP_SOUND_IO.is_set() or SHUTDOWN.is_set():
+        while not (STOP_SOUND_IO.is_set() or SHUTDOWN.is_set()):
             # print 'acessing output_queue'
             perform_io(queue, stream)
         print 'STOP_SOUND_IO triggered'
         stream.stop_stream()
         stream.close()
-
-
-
-def player():
-    print '[Player] initiating, start_io: {}, waiting to be set'.format(START_SOUND_IO.is_set())
-
-    START_SOUND_IO.wait()
-
-    print '[Player] started, start_io: {}'.format(START_SOUND_IO.is_set())
-    stream = PA.open(**OUTPUT_PARAMS)
-    print '[Player] <stream> inited'
-    while not STOP_SOUND_IO.is_set():
-        # print 'acessing output_queue'
-        block = OUTPUT_QUEUE.get()
-        # print 'PLAYER PLAYING'  # haters fighting, righteous praying!
-        stream.write(block)
-    print 'STOP_SOUND_IO triggered'
-    stream.stop_stream()
-    stream.close()
-
-
-def recorder():
-    print '[Recorder] initiating, start_io: {}, waiting to be set'.format(START_SOUND_IO.is_set())
-
-    START_SOUND_IO.wait()
-
-    print '[Recorder] started, start_io: {}'.format(START_SOUND_IO.is_set())
-    stream = PA.open(**INPUT_PARAMS)
-    print '[Recorder] <stream> inited'
-    while not STOP_SOUND_IO.is_set():
-        block = stream.read(CHUNK)
-        # print 'RECORDER RECORDING'
-        INPUT_QUEUE.put(block)
-    print 'STOP_SOUND_IO triggered'
-    stream.stop_stream()
-    stream.close()
