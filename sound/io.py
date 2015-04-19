@@ -1,7 +1,5 @@
-import Queue
 import pyaudio
-import threading
-
+from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN
 # ---- Queues
 # Shit works like this:
 #
@@ -24,11 +22,6 @@ import threading
 # Also we would like to have trigger that tells us to stop SoundIO, which is STOP_SOUND_IO Event
 # And we want to know when to start capture, START_SOUND_IO event serves this
 
-OUTPUT_QUEUE = Queue.Queue()
-INPUT_QUEUE = Queue.Queue()
-STOP_SOUND_IO = threading.Event()
-START_SOUND_IO = threading.Event()
-SHUTDOWN = threading.Event()
 
 # ---- SoundIO settings
 # We want this to be global, since we might want to change them on the fly

@@ -22,8 +22,15 @@
 #       || ------------>>>>  ||
 #       ||                   ||
 #
+
 WTAL = "WTAL"
 SURE = "SURE"
 NOTY = "NOTY"
 CALL = "CALL"
 CHAO = "CHAO"
+
+ON_CALL = "On call"
+CONNECTING = "Connecting"
+NOT_CONNECTED = "Not connected"
+
+MAX_WAIT_TIME = 5

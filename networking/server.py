@@ -1,22 +1,29 @@
 import SocketServer
-import socket
 import threading
-
-from sound.io import INPUT_QUEUE, OUTPUT_QUEUE, START_SOUND_IO, STOP_SOUND_IO, SHUTDOWN
+import sched
+import time
+from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN
 from . import messages
 
 
 class Server(SocketServer.UDPServer):
-    def __init__(self, server_address, parent_caller, RequestHandlerClass=None):
+    def __init__(self, server_address, parent_caller):
         """
-        :param caller: instance of Caller that we are passing to be able
+        :param parent_caller: instance of Caller that we are passing to be able
         """
         SocketServer.UDPServer.__init__(self, server_address=server_address, RequestHandlerClass=None)
         # We are handling requests right inside server
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
+        self.last_net_action = None  # Last time that we actually got some data
+        #self.socket.sendto = self.__wrappedsocksend
         self.parent_caller = parent_caller
 
+    #def __wrappedsocksend(self, *args, **kwargs):
+    #    self.last_net_action = time.time()
+    #    self.socket.sendto(*args, **kwargs)
+
     def _send_text(self, data="ping", to=None):
+        self.last_net_action = time.time()
         try:
             if to:
                 self.parent_caller.interlocutor = to
@@ -32,53 +39,50 @@ class Server(SocketServer.UDPServer):
             self.parent_caller.callmode.wait(timeout=0.2)
             while self.parent_caller.callmode.is_set() and (not SHUTDOWN.is_set()):
                 print 'callmode accessed, getting queue'
-                chunk = INPUT_QUEUE.get(timeout=1)
+                chunk = INPUT_QUEUE.get(timeout=2)
                 if not chunk:
                     continue
+                # self.last_net_action = time.time()
                 print 'got queue, sending'
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
                 self.socket.sendto(chunk, self.parent_caller.interlocutor)
                 print 'tried to send'
-            print 'SEND_CHUNKS CALLMODE BLOCK END'
+            #print 'SEND_CHUNKS CALLMODE BLOCK END'
         print 'SEND_CHUNKS EXIT'
-        #
-        # while not self.parent_caller.callmode.is_set():
-        #     print 'WAITING FOR CALLMODE'
-        #     self.parent_caller.callmode.wait()
-        #     while self.parent_caller.callmode.is_set():
-        #         #print 'callmode accessed, getting queue'
-        #         chunk = INPUT_QUEUE.get()
-        #         #print 'got queue, sending'
-        #         if not self.parent_caller.interlocutor:
-        #             print 'no interlocutor, breaking'
-        #             break
-        #         self.socket.sendto(chunk, self.parent_caller.interlocutor)
-        #         #print 'tried to send'
-        # print "send_chunks thread exit"
 
     def finish_request(self, request, client_address):
         """
         This should call a request handler, but we are implementing it right here (for now)
         """
         data, sock = request  # request[0], request[1]
+        self.last_net_action = time.time()
         #print 'Got data!'
         # TODO: watch at data protocol header
         self.parent_caller.parse_data(data=data, sock=sock, address=client_address)
 
 
-
-
 class Caller(Server, object):
     def __init__(self, ip, port):
-        Server.__init__(self, server_address=(ip, port), parent_caller=self, RequestHandlerClass=None)
+        Server.__init__(self, server_address=(ip, port), parent_caller=self)
         self.interlocutor = None
-        self.callmode = threading.Event()
         self.__trying_to_call = False
         self.__trying_to_answer = False
+        self.checker = sched.scheduler(time.time, time.sleep)
+        self.callmode = threading.Event()
+        #
+        self.__init_scheduler()
+        #
         self.output_thread = threading.Thread(target=self._send_chunks, name="Chunk sending thread")
-        self.output_thread.start() # Won't work since callmode is not set
+        self.output_thread.start()  # Won't actually start since callmode is not set
+
+    def __init_scheduler(self):
+        scheduler = sched.scheduler(time.time, time.sleep)
+        sched_event = scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, self))
+        self.scheduler_thread = threading.Thread(target=scheduler.run, name="Scheduler thread")
+        self.scheduler_thread.setDaemon(True)
+        self.scheduler_thread.start()
 
     def call(self, address):
         """
@@ -94,6 +98,8 @@ class Caller(Server, object):
         """
         Stops the call
         """
+        if not self.interlocutor:
+            return
         self._leave_call()
 
     def send(self, message, address=None):
@@ -108,18 +114,14 @@ class Caller(Server, object):
     @property
     def status(self):
         if self.callmode.is_set():
-            return "On call"
+            return messages.ON_CALL
         if self.__trying_to_call or self.__trying_to_answer:
-            return "Connecting"
-        return "Not connected"
+            return messages.CONNECTING
+        return messages.NOT_CONNECTED
 
     @property
     def port(self):
         return self.server_address[1]
-
-    @port.setter
-    def port(self, value):
-        raise NotImplementedError
 
     def parse_data(self, data, sock, address):
         command = data[:4]
@@ -195,4 +197,14 @@ class Caller(Server, object):
         self.callmode.clear()
         START_SOUND_IO.clear()
         STOP_SOUND_IO.set()
+
+
+def check_status_recursive(scheduler, instance):
+    if SHUTDOWN.is_set():
+        return
+    print 'Scheduler working'
+    if instance.status == messages.ON_CALL or instance.status == messages.CONNECTING:
+        if time.time() - instance.last_net_action > messages.MAX_WAIT_TIME:
+            instance.hang_up()
+    scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, instance))
 

@@ -4,7 +4,7 @@ import re
 from ttk import Frame, Button, Style, Entry, Label
 import tkMessageBox
 from mock import Mock
-from sound.io import SHUTDOWN
+from proto.parallels import SHUTDOWN
 from networking.base import get_local_addr
 
 ACCEPTABLE_CHARS = "1234567890:."
@@ -95,10 +95,13 @@ class MainForm(Frame):
         status = self.caller_instance.status
         if status.startswith('On'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="green", outline="light grey")
+            self.EntryAddress.configure(state='readonly')
         elif status.startswith('Not'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="red", outline="light grey")
+            self.EntryAddress.configure(state='')
         else:
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="yellow", outline="light grey")
+            self.EntryAddress.configure(state='readonly')
         self.LabelCallmode['text'] = status
         self.parent.after(ms=100, func=self.checkStatus)
 
@@ -110,6 +113,7 @@ class MainForm(Frame):
         x = (sw - w)/2
         y = (sh - h)/2
         self.parent.geometry('%dx%d+%d+%d' % (w, h, x, y))
+
 
 def initialize(caller_instance):
     root = Tk()

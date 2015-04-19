@@ -2,11 +2,13 @@ import sys
 import threading
 
 from console import console
-from gui import gui, tkgui
+from gui import tkgui
 
 from _socket import error as socket_error
 from networking.server import Caller
-from sound.io import sound_io_worker, SHUTDOWN
+from sound.io import sound_io_worker
+
+from proto.parallels import SHUTDOWN
 
 # All this module should do is to define whether GUI version should be used or vannila-console
 
