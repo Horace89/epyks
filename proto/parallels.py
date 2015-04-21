@@ -8,3 +8,5 @@ STOP_SOUND_IO = threading.Event()
 START_SOUND_IO = threading.Event()
 
 SHUTDOWN = threading.Event()
+
+EMPTY_QUEUE = Queue.Empty

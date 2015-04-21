@@ -1,5 +1,5 @@
 from Tkconstants import W
-from Tkinter import Tk, BOTH, END, Canvas
+from Tkinter import Tk, BOTH, END, Canvas, Listbox, Scrollbar, W, E, S, N, VERTICAL
 import re
 from ttk import Frame, Button, Style, Entry, Label
 import tkMessageBox
@@ -17,6 +17,7 @@ def full_ipv4_check(fulladdr):
     ip, port = fulladdr.split(':')
     return True if IPV4_RE.match(ip) and (1 < int(port) < 65536) else False
 
+
 # noinspection PyAttributeOutsideInit,PyPep8Naming,PyMethodMayBeStatic,PyShadowingBuiltins
 class MainForm(Frame):
     """
@@ -28,31 +29,31 @@ class MainForm(Frame):
         self.caller_instance = caller_instance
         self.running_on = "%s:%s" % (get_local_addr(), getattr(self.caller_instance, 'port', None) or "8888")
         self.parent = parent
+        caller_instance.messangers.append(self)
         self.initUI()
-        
+
     def initUI(self):
         self.__centerWindow()
         self.parent.title("epyks %s" % self.running_on)
-        #self.pack(fill=BOTH, expand=1)
         #
-        #   Addr textbox
+        # Addr textbox
         #
         addr_validate = (self.parent.register(self.addrValidation), '%S', '%d')
         self.EntryAddress = Entry(self, validate='key', validatecommand=addr_validate, width=17)
-        self.EntryAddress.grid(row=0, column=0, padx=10, pady=5, columnspan=3, sticky=W)
+        self.EntryAddress.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky=W)
         self.EntryAddress.delete(0, END)
         self.EntryAddress.insert(0, "192.168.0.102:8889")
         #
         #   Call button
         #
-        self.ButtonCall = Button(self, text="Call",  command=self.onButtonCallClick)
-        self.ButtonCall.grid(row=0, column=3, pady=5)
+        self.ButtonCall = Button(self, text="Call", command=self.onButtonCallClick)
+        self.ButtonCall.grid(row=0, column=1, pady=5)
         #
         #   Callmode status canvas
         #
         self.CanvasCallmode = Canvas(self, width=20, height=20, bg="light grey")
         self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="red", outline="light grey")
-        self.CanvasCallmode.grid(row=1, column=0, pady=0, padx=10, sticky=W)
+        self.CanvasCallmode.grid(row=1, column=0, pady=0, padx=10, sticky=W, columnspan=2)
         #
         #   Callmode status label
         #
@@ -61,8 +62,25 @@ class MainForm(Frame):
         #
         #   End call button
         #
-        self.ButtonEndCall = Button(self, text="End call",  command=self.onButtonEndCallClick)
-        self.ButtonEndCall.grid(row=1, column=3)
+        self.ButtonEndCall = Button(self, text="End call", command=self.onButtonEndCallClick)
+        self.ButtonEndCall.grid(row=1, column=1)
+
+        #
+        #   Message listbox
+        #
+        #addr_validate = (self.parent.register(self.addrValidation), '%S', '%d')
+        self.MessagesListBox = Listbox(self)
+        self.MessagesListBox.grid(row=2, column=0, columnspan=2, sticky="NSEW")
+        #
+        # Message entry
+        #
+        self.EntryMessage = Entry(self, text="Send message")
+        self.EntryMessage.grid(row=3, column=0)
+        #
+        # Send message
+        #
+        self.ButtonSendMessage = Button(self, text="Send message", command=self.onButtonSendMessageClick)
+        self.ButtonSendMessage.grid(row=3, column=1)
 
         # Testing
 
@@ -88,8 +106,18 @@ class MainForm(Frame):
         ip, port = address.split(':')
         self.caller_instance.call((ip, int(port)))
 
+    def onButtonSendMessageClick(self):
+        message = self.EntryMessage.get()
+        self.MessagesListBox.insert(END, "{author} > {message}".format(author="YOU", message=message))
+        ip, port = self.EntryAddress.get().split(':')
+        self.caller_instance.send(message=message, address=(ip, int(port)))
+
     def onButtonEndCallClick(self):
         self.caller_instance.hang_up()
+
+    def onMessageRecieved(self, author, message):
+        print 'MESAAAAAAAAAAAAAAAAAAAGE =-=-=-=-=-=-=-=-=-'
+        self.MessagesListBox.insert(END, "{author} > {message}".format(author=author, message=message))
 
     def checkStatus(self):
         status = self.caller_instance.status
@@ -105,26 +133,31 @@ class MainForm(Frame):
         self.LabelCallmode['text'] = status
         self.parent.after(ms=100, func=self.checkStatus)
 
+    def onAddListBoxItem(self):
+        self.MessagesListBox.insert(END, "aloha")
+
     def __centerWindow(self):
-        w = 250
-        h = 70
+        w = 600
+        h = 600
         sw = self.parent.winfo_screenwidth()
         sh = self.parent.winfo_screenheight()
-        x = (sw - w)/2
-        y = (sh - h)/2
+        x = (sw - w) / 2
+        y = (sh - h) / 2
         self.parent.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 
 def initialize(caller_instance):
     root = Tk()
-    root.resizable(0, 0)
+    #root.resizable(0, 0)
     app = MainForm(parent=root, caller_instance=caller_instance)
     root.after(ms=100, func=app.checkStatus)
     root.mainloop()
     SHUTDOWN.set()
 
+
 if __name__ == '__main__':
-    caller_instance = Mock
-    caller_instance.status = "Not connected"
-    caller_instance.port = "3333"
-    initialize(caller_instance)
+    caller = Mock
+    caller.status = "Not connected"
+    caller.port = "3333"
+    caller.messangers = []
+    initialize(caller_instance=caller)

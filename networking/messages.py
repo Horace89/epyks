@@ -33,4 +33,6 @@ ON_CALL = "On call"
 CONNECTING = "Connecting"
 NOT_CONNECTED = "Not connected"
 
+MESSAGE_HEADER = "MSG!"
+
 MAX_WAIT_TIME = 5

@@ -1,5 +1,5 @@
 import pyaudio
-from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN
+from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN, EMPTY_QUEUE
 # ---- Queues
 # Shit works like this:
 #
@@ -50,9 +50,12 @@ PA = pyaudio.PyAudio()
 
 
 def perform_play(queue, stream):
-    block = queue.get(timeout=1)
+    try:
+        block = queue.get(timeout=1)
+    except EMPTY_QUEUE:
+        block = None
     if (not block) or SHUTDOWN.is_set():
-        pass
+        return
     stream.write(block)
 
 

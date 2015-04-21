@@ -58,7 +58,6 @@ class Server(SocketServer.UDPServer):
         """
         data, sock = request  # request[0], request[1]
         self.last_net_action = time.time()
-        #print 'Got data!'
         # TODO: watch at data protocol header
         self.parent_caller.parse_data(data=data, sock=sock, address=client_address)
 
@@ -67,19 +66,20 @@ class Caller(Server, object):
     def __init__(self, ip, port):
         Server.__init__(self, server_address=(ip, port), parent_caller=self)
         self.interlocutor = None
+        self.callmode = threading.Event()
+        self.messangers = []
         self.__trying_to_call = False
         self.__trying_to_answer = False
-        self.checker = sched.scheduler(time.time, time.sleep)
-        self.callmode = threading.Event()
-        #
         self.__init_scheduler()
-        #
+        self.__init_chunks_output()
+
+    def __init_chunks_output(self):
         self.output_thread = threading.Thread(target=self._send_chunks, name="Chunk sending thread")
         self.output_thread.start()  # Won't actually start since callmode is not set
 
     def __init_scheduler(self):
         scheduler = sched.scheduler(time.time, time.sleep)
-        sched_event = scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, self))
+        scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, self))
         self.scheduler_thread = threading.Thread(target=scheduler.run, name="Scheduler thread")
         self.scheduler_thread.setDaemon(True)
         self.scheduler_thread.start()
@@ -104,7 +104,7 @@ class Caller(Server, object):
 
     def send(self, message, address=None):
         address = address or self.interlocutor
-        self._send_text(data=message, to=address)
+        self._send_text(data="MSG!{}".format(message), to=address)
 
     def shutdown(self):
         print 'trying to shut down'
@@ -126,6 +126,10 @@ class Caller(Server, object):
     def parse_data(self, data, sock, address):
         command = data[:4]
         self.interlocutor = address
+        if command == messages.MESSAGE_HEADER:
+            print 'in command message!'
+            self._alert_messangers(author=self.interlocutor or address, message=data[4:])
+            return
         # if we are initiating a call
         if command == messages.WTAL:
             self.__trying_to_answer = True
@@ -140,7 +144,6 @@ class Caller(Server, object):
         elif self.__trying_to_answer:
             if command == messages.CALL:
                 self.__enter_callmode()
-
         #  if we are ending call
         if command == messages.CHAO:
             self.__refresh_status()
@@ -155,6 +158,13 @@ class Caller(Server, object):
         self.__trying_to_call = True
         print 'Caller variabels set'
         self._send_wtal()
+
+    def _alert_messangers(self, author, message):
+        print 'trying to allert messangers'
+        print self.messangers
+        for messanger in self.messangers:
+            print 'alerting {}'.format(messanger)
+            messanger.onMessageRecieved(author, message)
 
     def _send_wtal(self):
         print 'sending wtal'
@@ -202,7 +212,6 @@ class Caller(Server, object):
 def check_status_recursive(scheduler, instance):
     if SHUTDOWN.is_set():
         return
-    print 'Scheduler working'
     if instance.status == messages.ON_CALL or instance.status == messages.CONNECTING:
         if time.time() - instance.last_net_action > messages.MAX_WAIT_TIME:
             instance.hang_up()
