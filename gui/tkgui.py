@@ -1,11 +1,13 @@
-from Tkconstants import W
-from Tkinter import Tk, BOTH, END, Canvas, Listbox, Scrollbar, W, E, S, N, VERTICAL
+from Tkinter import Tk, BOTH, END, Canvas, Listbox, W
 import re
-from ttk import Frame, Button, Style, Entry, Label
+from ttk import Frame, Button, Entry, Label
 import tkMessageBox
+
 from mock import Mock
+
 from proto.parallels import SHUTDOWN
 from networking.base import get_local_addr
+
 
 ACCEPTABLE_CHARS = "1234567890:."
 IPV4_RE = re.compile(ur'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
@@ -44,7 +46,7 @@ class MainForm(Frame):
         self.EntryAddress.delete(0, END)
         self.EntryAddress.insert(0, "192.168.0.102:8889")
         #
-        #   Call button
+        # Call button
         #
         self.ButtonCall = Button(self, text="Call", command=self.onButtonCallClick)
         self.ButtonCall.grid(row=0, column=1, pady=5)
@@ -68,24 +70,27 @@ class MainForm(Frame):
         #
         #   Message listbox
         #
-        #addr_validate = (self.parent.register(self.addrValidation), '%S', '%d')
         self.MessagesListBox = Listbox(self)
-        self.MessagesListBox.grid(row=2, column=0, columnspan=2, sticky="NSEW")
+        self.MessagesListBox.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky="EW")
         #
         # Message entry
         #
-        self.EntryMessage = Entry(self, text="Send message")
-        self.EntryMessage.grid(row=3, column=0)
+        self.EntryMessage = Entry(self)
+        self.EntryMessage.grid(row=3, column=0, padx=2)
         #
         # Send message
         #
-        self.ButtonSendMessage = Button(self, text="Send message", command=self.onButtonSendMessageClick)
+        self.ButtonSendMessage = Button(self, text="Send", command=self.onButtonSendMessageClick)
         self.ButtonSendMessage.grid(row=3, column=1)
 
         # Testing
 
         # Pack all
         self.pack(fill=BOTH, expand=1)
+
+    def onGetAnswerMessageBox(self, interlocutor):
+        print "MESSAGE BOX SHOULD BE HERE"
+        return tkMessageBox.askyesno(title="Incoming call", message="A call from {}, wanna answer?".format(interlocutor))
 
     def addrValidation(self, string, action):
         if action != 1:
@@ -108,7 +113,7 @@ class MainForm(Frame):
 
     def onButtonSendMessageClick(self):
         message = self.EntryMessage.get()
-        self.MessagesListBox.insert(END, "{author} > {message}".format(author="YOU", message=message))
+        self.MessagesListBox.insert(END, "{author}> {message}".format(author="self", message=message))
         ip, port = self.EntryAddress.get().split(':')
         self.caller_instance.send(message=message, address=(ip, int(port)))
 
@@ -116,14 +121,21 @@ class MainForm(Frame):
         self.caller_instance.hang_up()
 
     def onMessageRecieved(self, author, message):
-        print 'MESAAAAAAAAAAAAAAAAAAAGE =-=-=-=-=-=-=-=-=-'
-        self.MessagesListBox.insert(END, "{author} > {message}".format(author=author, message=message))
+        """
+        :param author: Address of author, tuple (ip, port)
+        :param message: Content
+        """
+        author = ''.join([author[0], ':', str(author[1])])
+        self.MessagesListBox.insert(END, "{author}> {message}".format(author=author, message=message))
 
     def checkStatus(self):
         status = self.caller_instance.status
         if status.startswith('On'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="green", outline="light grey")
             self.EntryAddress.configure(state='readonly')
+            self.EntryAddress.delete(0, END)
+            self.EntryAddress.insert(0, "%s:%s".format(self.caller_instance.interlocutor[0],
+                                                       self.caller_instance.interlocutor[1]))
         elif status.startswith('Not'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="red", outline="light grey")
             self.EntryAddress.configure(state='')
@@ -133,12 +145,9 @@ class MainForm(Frame):
         self.LabelCallmode['text'] = status
         self.parent.after(ms=100, func=self.checkStatus)
 
-    def onAddListBoxItem(self):
-        self.MessagesListBox.insert(END, "aloha")
-
     def __centerWindow(self):
-        w = 600
-        h = 600
+        w = 260
+        h = 270
         sw = self.parent.winfo_screenwidth()
         sh = self.parent.winfo_screenheight()
         x = (sw - w) / 2
@@ -148,7 +157,7 @@ class MainForm(Frame):
 
 def initialize(caller_instance):
     root = Tk()
-    #root.resizable(0, 0)
+    root.resizable(0, 0)
     app = MainForm(parent=root, caller_instance=caller_instance)
     root.after(ms=100, func=app.checkStatus)
     root.mainloop()

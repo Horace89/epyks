@@ -13,7 +13,6 @@ from proto.parallels import SHUTDOWN
 # All this module should do is to define whether GUI version should be used or vannila-console
 
 
-
 # noinspection PyPep8Naming
 def initialize_threads_and_server():
     HOST, PORT = '', 8888

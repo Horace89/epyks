@@ -1,2 +1,4 @@
+mock
+pyaudio
 # PyAudio
 npyscreen

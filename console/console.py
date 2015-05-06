@@ -1,5 +1,6 @@
 from networking.base import get_local_addr
 import re
+
 """
 This class handles users text input-output
 """
@@ -14,6 +15,7 @@ BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 
 IPV4_MATCH = """^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"""
+
 
 def wrap(style, text):
     return ''.join([style, text, style])
@@ -41,8 +43,10 @@ def greetings():
 def ipv4_check(addr):
     return re.match(IPV4_MATCH, addr)
 
+
 def port_check(port):
     return 0 < int(port) < 65535
+
 
 def commander(caller_instance=None):
     call = False
@@ -64,7 +68,8 @@ def commander(caller_instance=None):
                 prnt('Trying to initiate a call')
                 caller_instance.call(address=(addr, int(port)))
         elif command[0] == "endcall":
-                caller_instance.hang_up()
+            caller_instance.hang_up()
+
 
 def initialize(caller_instance, server_thread, playback_thread, record_thread):
     """

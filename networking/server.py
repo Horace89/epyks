@@ -15,12 +15,7 @@ class Server(SocketServer.UDPServer):
         # We are handling requests right inside server
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
         self.last_net_action = None  # Last time that we actually got some data
-        #self.socket.sendto = self.__wrappedsocksend
         self.parent_caller = parent_caller
-
-    #def __wrappedsocksend(self, *args, **kwargs):
-    #    self.last_net_action = time.time()
-    #    self.socket.sendto(*args, **kwargs)
 
     def _send_text(self, data="ping", to=None):
         self.last_net_action = time.time()
@@ -42,14 +37,12 @@ class Server(SocketServer.UDPServer):
                 chunk = INPUT_QUEUE.get(timeout=2)
                 if not chunk:
                     continue
-                # self.last_net_action = time.time()
                 print 'got queue, sending'
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
                 self.socket.sendto(chunk, self.parent_caller.interlocutor)
                 print 'tried to send'
-            #print 'SEND_CHUNKS CALLMODE BLOCK END'
         print 'SEND_CHUNKS EXIT'
 
     def finish_request(self, request, client_address):
@@ -79,9 +72,8 @@ class Caller(Server, object):
 
     def __init_scheduler(self):
         scheduler = sched.scheduler(time.time, time.sleep)
-        scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, self))
+        scheduler.enter(delay=1, priority=1, action=check_status_repeatedly, argument=(scheduler, self))
         self.scheduler_thread = threading.Thread(target=scheduler.run, name="Scheduler thread")
-        self.scheduler_thread.setDaemon(True)
         self.scheduler_thread.start()
 
     def call(self, address):
@@ -123,6 +115,42 @@ class Caller(Server, object):
     def port(self):
         return self.server_address[1]
 
+    def parse_message(self, author, message):
+        """
+        onMessageRecievedParams:
+        :param author: Address of author, tuple (ip, port)
+        :param message: Content
+        """
+        self._alert_messangers(author=author, message=message)
+
+    def parse_audio(self, data, interlocutor):
+        if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
+            OUTPUT_QUEUE.put(data)
+
+    def parse_control(self, command):
+        if command == messages.WTAL:
+            self.__trying_to_answer = True
+            # TODO: leave user a choice to refuse
+            answer = None
+            for messager in self.messangers:
+                answer = messager.onGetAnswerMessageBox(self.interlocutor)
+            if answer is True:
+                self._send_sure()
+            else:
+                self._send_chao()
+        if self.__trying_to_call:
+            if command == messages.SURE:
+                self._send_call()
+                self.__enter_callmode()
+            elif command == messages.NOTY:
+                self.__refresh_status()
+        elif self.__trying_to_answer:
+            if command == messages.CALL:
+                self.__enter_callmode()
+        #  if we are ending call
+        if command == messages.CHAO:
+            self.__refresh_status()
+
     def parse_data(self, data, sock, address):
         command = data[:4]
         self.interlocutor = address
@@ -160,10 +188,7 @@ class Caller(Server, object):
         self._send_wtal()
 
     def _alert_messangers(self, author, message):
-        print 'trying to allert messangers'
-        print self.messangers
         for messanger in self.messangers:
-            print 'alerting {}'.format(messanger)
             messanger.onMessageRecieved(author, message)
 
     def _send_wtal(self):
@@ -209,11 +234,11 @@ class Caller(Server, object):
         STOP_SOUND_IO.set()
 
 
-def check_status_recursive(scheduler, instance):
+def check_status_repeatedly(scheduler, instance):
     if SHUTDOWN.is_set():
         return
     if instance.status == messages.ON_CALL or instance.status == messages.CONNECTING:
         if time.time() - instance.last_net_action > messages.MAX_WAIT_TIME:
             instance.hang_up()
-    scheduler.enter(delay=1, priority=1, action=check_status_recursive, argument=(scheduler, instance))
+    scheduler.enter(delay=1, priority=1, action=check_status_repeatedly, argument=(scheduler, instance))
 
