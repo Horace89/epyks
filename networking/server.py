@@ -17,6 +17,12 @@ class Server(SocketServer.UDPServer):
         self.last_net_action = None  # Last time that we actually got some data
         self.parent_caller = parent_caller
 
+    def send_message(self, data, to=None):
+        self._send_text(data="{}{}".format(messages.MESSAGE_HEADER, data), to=to)
+
+    def send_command(self, command, to=None):
+        self._send_text(data="{}{}".format(messages.COMMAND_HEADER, command), to=to)
+
     def _send_text(self, data="ping", to=None):
         self.last_net_action = time.time()
         try:
@@ -41,7 +47,7 @@ class Server(SocketServer.UDPServer):
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
-                self.socket.sendto(chunk, self.parent_caller.interlocutor)
+                self.socket.sendto("{}{}".format(messages.VOICECH_HEADER, chunk), self.parent_caller.interlocutor)
                 print 'tried to send'
         print 'SEND_CHUNKS EXIT'
 
@@ -96,7 +102,7 @@ class Caller(Server, object):
 
     def send(self, message, address=None):
         address = address or self.interlocutor
-        self._send_text(data="MSG!{}".format(message), to=address)
+        self.send_message(data=message, to=address)
 
     def shutdown(self):
         print 'trying to shut down'
@@ -123,7 +129,7 @@ class Caller(Server, object):
         """
         self._alert_messangers(author=author, message=message)
 
-    def parse_audio(self, data, interlocutor):
+    def parse_audio(self, author, data):
         if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
             OUTPUT_QUEUE.put(data)
 
@@ -132,12 +138,13 @@ class Caller(Server, object):
             self.__trying_to_answer = True
             # TODO: leave user a choice to refuse
             answer = None
-            for messager in self.messangers:
-                answer = messager.onGetAnswerMessageBox(self.interlocutor)
-            if answer is True:
-                self._send_sure()
-            else:
-                self._send_chao()
+            self._send_sure()
+            # for messager in self.messangers:
+            #     answer = messager.onGetAnswerMessageBox(self.interlocutor)
+            # if answer is True:
+            #     self._send_sure()
+            # else:
+            #     self._send_chao()
         if self.__trying_to_call:
             if command == messages.SURE:
                 self._send_call()
@@ -152,34 +159,14 @@ class Caller(Server, object):
             self.__refresh_status()
 
     def parse_data(self, data, sock, address):
-        command = data[:4]
-        self.interlocutor = address
-        if command == messages.MESSAGE_HEADER:
-            print 'in command message!'
-            self._alert_messangers(author=self.interlocutor or address, message=data[4:])
-            return
-        # if we are initiating a call
-        if command == messages.WTAL:
-            self.__trying_to_answer = True
-            # TODO: leave user a choice to refuse
-            self._send_sure()
-        if self.__trying_to_call:
-            if command == messages.SURE:
-                self._send_call()
-                self.__enter_callmode()
-            elif command == messages.NOTY:
-                self.__refresh_status()
-        elif self.__trying_to_answer:
-            if command == messages.CALL:
-                self.__enter_callmode()
-        #  if we are ending call
-        if command == messages.CHAO:
-            self.__refresh_status()
-
-        if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
-            OUTPUT_QUEUE.put(data)
-        else:
-            print "<{ip} {port}>: {message}".format(ip=address[0], port=address[1], message=data)
+        command = data[0]
+        if command == messages.COMMAND_HEADER:
+            self.interlocutor = address
+            self.parse_control(data[1:])
+        elif command == messages.MESSAGE_HEADER:
+            self.parse_message(self.interlocutor or address, message=data[1:])
+        elif command == messages.VOICECH_HEADER:
+            self.parse_audio(author=self.interlocutor, data=data[1:])
 
     def __initiate_call(self, address):
         self.interlocutor = address
@@ -193,19 +180,23 @@ class Caller(Server, object):
 
     def _send_wtal(self):
         print 'sending wtal'
-        self._send_text(data=messages.WTAL, to=self.interlocutor)
+        self.send_command(messages.WTAL, to=self.interlocutor)
+        # self._send_text(data=messages.WTAL, to=self.interlocutor)
 
     def _send_sure(self):
         print 'sending sure'
-        self._send_text(data=messages.SURE, to=self.interlocutor)
+        self.send_command(messages.SURE, to=self.interlocutor)
+        # self._send_text(data=messages.SURE, to=self.interlocutor)
 
     def _send_call(self):
         print 'sending call'
-        self._send_text(data=messages.CALL, to=self.interlocutor)
+        self.send_command(messages.CALL, to=self.interlocutor)
+        # self._send_text(data=messages.CALL, to=self.interlocutor)
 
     def _send_chao(self):
         print 'sending chao'
-        self._send_text(data=messages.CHAO, to=self.interlocutor)
+        self.send_command(messages.CHAO, to=self.interlocutor)
+        # self._send_text(data=messages.CHAO, to=self.interlocutor)
 
     def _leave_call(self):
         print "trying to end call"
