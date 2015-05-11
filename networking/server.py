@@ -138,13 +138,13 @@ class Caller(Server, object):
             self.__trying_to_answer = True
             # TODO: leave user a choice to refuse
             answer = None
-            self._send_sure()
-            # for messager in self.messangers:
-            #     answer = messager.onGetAnswerMessageBox(self.interlocutor)
-            # if answer is True:
-            #     self._send_sure()
-            # else:
-            #     self._send_chao()
+            #self._send_sure()
+            for messager in self.messangers:
+                answer = messager.onGetAnswerMessageBox(self.interlocutor)
+            if answer is True:
+                self._send_sure()
+            else:
+                self._leave_call()
         if self.__trying_to_call:
             if command == messages.SURE:
                 self._send_call()

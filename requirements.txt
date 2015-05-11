@@ -1,4 +1,3 @@
 mock
 pyaudio
 # PyAudio
-npyscreen
