@@ -89,10 +89,10 @@ class MainForm(Frame):
         self.pack(fill=BOTH, expand=1)
 
     def onGetAnswerMessageBox(self, interlocutor):
-        print "MESSAGE BOX SHOULD BE HERE"
         return tkMessageBox.askyesno(title="Incoming call", message="A call from {}, wanna answer?".format(interlocutor))
 
     def addrValidation(self, string, action):
+        print string
         if action != 1:
             # 0 - delete, 1 - insert, -1 - focus in/out
             return True
@@ -132,10 +132,11 @@ class MainForm(Frame):
         status = self.caller_instance.status
         if status.startswith('On'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="green", outline="light grey")
-            self.EntryAddress.configure(state='readonly')
             self.EntryAddress.delete(0, END)
-            self.EntryAddress.insert(0, "%s:%s".format(self.caller_instance.interlocutor[0],
+            self.EntryAddress.insert(0, "{}:{}".format(self.caller_instance.interlocutor[0],
                                                        self.caller_instance.interlocutor[1]))
+            self.EntryAddress.configure(state='readonly')
+
         elif status.startswith('Not'):
             self.CanvasCallmode.create_oval(1, 1, 20, 20, fill="red", outline="light grey")
             self.EntryAddress.configure(state='')

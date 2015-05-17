@@ -1,4 +1,5 @@
 import SocketServer
+import sys
 import threading
 import sched
 import time
@@ -39,11 +40,11 @@ class Server(SocketServer.UDPServer):
         while not SHUTDOWN.is_set():
             self.parent_caller.callmode.wait(timeout=0.2)
             while self.parent_caller.callmode.is_set() and (not SHUTDOWN.is_set()):
-                print 'callmode accessed, getting queue'
+                # print 'callmode accessed, getting queue'
                 chunk = INPUT_QUEUE.get(timeout=2)
                 if not chunk:
                     continue
-                print 'got queue, sending'
+                # print 'got queue, sending'
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
@@ -138,13 +139,13 @@ class Caller(Server, object):
             self.__trying_to_answer = True
             # TODO: leave user a choice to refuse
             answer = None
-            #self._send_sure()
-            for messager in self.messangers:
-                answer = messager.onGetAnswerMessageBox(self.interlocutor)
-            if answer is True:
-                self._send_sure()
-            else:
-                self._leave_call()
+            self._send_sure()
+            # for messager in self.messangers:
+            #     answer = messager.onGetAnswerMessageBox(self.interlocutor)
+            # if answer is True:
+            #     self._send_sure()
+            # else:
+            #     self._leave_call()
         if self.__trying_to_call:
             if command == messages.SURE:
                 self._send_call()

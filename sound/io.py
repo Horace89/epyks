@@ -1,3 +1,4 @@
+import time
 import pyaudio
 from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN, EMPTY_QUEUE
 # ---- Queues
@@ -29,7 +30,7 @@ from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUN
 # it to the ClientB
 
 CHUNK = 1024
-RATE = 22000
+RATE = 44100
 
 INPUT_PARAMS = {
     'frames_per_buffer': CHUNK,  # Check if this is best way
@@ -60,7 +61,9 @@ def perform_play(queue, stream):
 
 
 def perform_record(queue, stream):
+    # start = time.time()
     block = stream.read(CHUNK)
+    # print time.time() - start
     queue.put(block)
 
 
