@@ -1,7 +1,5 @@
-import sys
 import threading
 
-from console import console
 from gui import tkgui
 
 from _socket import error as socket_error
@@ -48,25 +46,9 @@ def initialize_threads_and_server():
 
 
 def main():
-    mode = '-console'  # default mode
-    modes = ('-console', '-gui')
-    try:
-        mode = sys.argv[1]
-    except IndexError:
-        # Using default
-        pass
-
-    if mode not in modes:
-        print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
-        return
     components = initialize_threads_and_server()
     try:
-        if mode == '-console':
-            console.initialize(**components)
-        elif mode == '-gui':
-            tkgui.initialize(components['caller_instance'])
-        else:
-            print 'Unknown mode {}, only those {} acceptable'.format(mode, modes)
+        tkgui.initialize(components['caller_instance'])
     except KeyboardInterrupt as ex:
         SHUTDOWN.set()
         raise ex

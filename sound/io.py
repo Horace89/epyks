@@ -29,8 +29,8 @@ from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUN
 # TODO Thought: we might not actually change input stream, but post-process sound before sending
 # it to the ClientB
 
-CHUNK = 1024
-RATE = 44100
+CHUNK = 512
+RATE = 22050
 
 INPUT_PARAMS = {
     'frames_per_buffer': CHUNK,  # Check if this is best way
@@ -53,6 +53,7 @@ PA = pyaudio.PyAudio()
 def perform_play(queue, stream):
     try:
         block = queue.get(timeout=1)
+        print queue.qsize()
     except EMPTY_QUEUE:
         block = None
     if (not block) or SHUTDOWN.is_set():
