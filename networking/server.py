@@ -92,7 +92,6 @@ class Server(SocketServer.UDPServer):
                 self.socket.sendto("{}{}{}".format(messages.VOICECH_HEADER, self.current_pid.pack(), chunk),
                                    self.parent_caller.interlocutor)
                 self.current_pid += 1
-                print 'tried to send'
         print 'SEND_CHUNKS EXIT'
 
     def finish_request(self, request, client_address):
