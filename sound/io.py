@@ -51,14 +51,23 @@ PA = pyaudio.PyAudio()
 
 
 def perform_play(queue, stream):
-    try:
-        block = queue.get(timeout=1)
-        print queue.qsize()
-    except EMPTY_QUEUE:
-        block = None
-    if (not block) or SHUTDOWN.is_set():
+    qsize = queue.qsize()
+    if qsize >= 6:
+        buff = [queue.get() for _ in range(qsize)]
+        sorted(buff, key=lambda buffitem: buffitem.pid)
+        for item in buff:
+            stream.write(item.voicebuff)
         return
-    stream.write(block)
+    if SHUTDOWN.is_set():
+        return
+    # try:
+    #     block = queue.get(timeout=1)
+    #     print queue.qsize()
+    # except EMPTY_QUEUE:
+    #     block = None
+    # if (not block) or SHUTDOWN.is_set():
+    #     return
+    #stream.write(block)
 
 
 def perform_record(queue, stream):

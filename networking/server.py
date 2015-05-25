@@ -173,9 +173,9 @@ class Caller(Server, object):
         """
         self._alert_messangers(author=author, message=message)
 
-    def parse_audio(self, author, data):
+    def parse_audio(self, author, packet):
         if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
-            OUTPUT_QUEUE.put(data)
+            OUTPUT_QUEUE.put(packet)
 
     def parse_control(self, command):
         if command == messages.WTAL:
@@ -206,8 +206,8 @@ class Caller(Server, object):
         elif command == messages.MESSAGE_HEADER:
             self.parse_message(self.interlocutor or address, message=data[1:])
         elif command == messages.VOICECH_HEADER:
-            print PacketID.unpack(data[1:3])
-            self.parse_audio(author=self.interlocutor, data=data[3:])
+            packet = VoiceData(data)
+            self.parse_audio(author=self.interlocutor, packet=packet)
 
     def overflow(self):
         self._send_overflow()
