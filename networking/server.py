@@ -1,10 +1,50 @@
 import SocketServer
-import sys
 import threading
 import sched
 import time
 from proto.parallels import OUTPUT_QUEUE, INPUT_QUEUE, STOP_SOUND_IO, START_SOUND_IO, SHUTDOWN
+import struct
 from . import messages
+
+
+class VoiceData(object):
+    def __init__(self, packet):
+        if packet[0] != messages.VOICECH_HEADER:
+            raise ValueError
+        self.pid = PacketID.unpack(packet[1:3])
+        self.voicebuff = packet[3:]
+
+
+class PacketID(object):
+    MAX_SIZE = 2 ** 16 - 1
+
+    def __init__(self):
+        self.x = 0
+
+    def __add__(self, other):
+        if self.x + other <= self.MAX_SIZE:
+            self.x += other
+            return self
+        self.x = 0
+        return self
+
+    @property
+    def value(self):
+        val = struct.pack("H", self.x)
+        return val
+
+    def pack(self):
+        return struct.pack("H", self.x)
+
+    @classmethod
+    def unpack(cls, packed_value):
+        try:
+            return struct.unpack("H", packed_value)
+        except struct.error:
+            return 0
+
+    def __str__(self):
+        return self.x
 
 
 class Server(SocketServer.UDPServer):
@@ -17,6 +57,7 @@ class Server(SocketServer.UDPServer):
         print "Server running on {}:{}".format(self.server_address[0], self.server_address[1])
         self.last_net_action = None  # Last time that we actually got some data
         self.parent_caller = parent_caller
+        self.current_pid = PacketID()
 
     def send_message(self, data, to=None):
         self._send_text(data="{}{}".format(messages.MESSAGE_HEADER, data), to=to)
@@ -48,7 +89,9 @@ class Server(SocketServer.UDPServer):
                 if not self.parent_caller.interlocutor:
                     print 'no interlocutor, breaking'
                     break
-                self.socket.sendto("{}{}".format(messages.VOICECH_HEADER, chunk), self.parent_caller.interlocutor)
+                self.socket.sendto("{}{}{}".format(messages.VOICECH_HEADER, self.current_pid.pack(), chunk),
+                                   self.parent_caller.interlocutor)
+                self.current_pid += 1
                 print 'tried to send'
         print 'SEND_CHUNKS EXIT'
 
@@ -152,6 +195,8 @@ class Caller(Server, object):
         #  if we are ending call
         if command == messages.CHAO:
             self.__refresh_status()
+        if command == messages.OFLO:
+            self.__relax_chunks()
 
     def parse_data(self, data, sock, address):
         command = data[0]
@@ -161,7 +206,11 @@ class Caller(Server, object):
         elif command == messages.MESSAGE_HEADER:
             self.parse_message(self.interlocutor or address, message=data[1:])
         elif command == messages.VOICECH_HEADER:
-            self.parse_audio(author=self.interlocutor, data=data[1:])
+            print PacketID.unpack(data[1:3])
+            self.parse_audio(author=self.interlocutor, data=data[3:])
+
+    def overflow(self):
+        self._send_overflow()
 
     def __initiate_call(self, address):
         self.interlocutor = address
@@ -193,6 +242,9 @@ class Caller(Server, object):
         self.send_command(messages.CHAO, to=self.interlocutor)
         # self._send_text(data=messages.CHAO, to=self.interlocutor)
 
+    def _send_overflow(self):
+        self.send_command(messages.OFLO, to=self.interlocutor)
+
     def _leave_call(self):
         print "trying to end call"
         self._send_chao()
@@ -219,6 +271,8 @@ class Caller(Server, object):
         START_SOUND_IO.clear()
         STOP_SOUND_IO.set()
 
+    def __relax_chunks(self):
+        raise NotImplementedError
 
 def check_status_repeatedly(scheduler, instance):
     if SHUTDOWN.is_set():
