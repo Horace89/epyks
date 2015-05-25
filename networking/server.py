@@ -174,6 +174,8 @@ class Caller(Server, object):
 
     def parse_audio(self, author, packet):
         if self.callmode.is_set():  # if we're in callmode, put incoming data into queue
+            if OUTPUT_QUEUE.qsize() > 10:
+                return
             OUTPUT_QUEUE.put(packet)
 
     def parse_control(self, command):
