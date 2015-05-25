@@ -52,10 +52,8 @@ PA = pyaudio.PyAudio()
 
 def perform_play(queue, stream):
     qsize = queue.qsize()
-    print qsize
     if qsize >= 10:
-        while queue.qsize != 5:
-            queue.get()
+        queue.queue.clear()
     if qsize >= 6:
         buff = [queue.get() for _ in range(qsize)]
         sorted(buff, key=lambda buffitem: buffitem.pid)
